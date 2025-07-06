@@ -1,11 +1,23 @@
 export async function getRecommendation({ height, weight, fit, unit }: { height: number; weight: number; fit: string; unit: string }) {
-  // Replace with your actual Railway backend URL
-  const API_URL = "https://your-railway-app.up.railway.app/recommend";
-  const res = await fetch(API_URL, {
+  // Use the correct Railway backend URL and endpoint
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://suitsize-ai-production.up.railway.app";
+  const endpoint = `${API_URL}/api/size-recommendation`;
+  
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ height, weight, fit, unit }),
+    body: JSON.stringify({ 
+      height, 
+      weight, 
+      fitPreference: fit,
+      unit 
+    }),
   });
-  if (!res.ok) throw new Error("API error");
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `API error: ${res.status}`);
+  }
+  
   return await res.json();
 } 
