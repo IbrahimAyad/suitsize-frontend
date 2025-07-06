@@ -1,7 +1,7 @@
 export async function getRecommendation({ height, weight, fit, unit }: { height: number; weight: number; fit: string; unit: string }) {
   // Use the correct Railway backend URL and endpoint
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://suitsize-ai-production.up.railway.app";
-  const endpoint = `${API_URL}/api/size-recommendation`;
+  const endpoint = `${API_URL}/api/recommend`;
   
   const res = await fetch(endpoint, {
     method: "POST",
@@ -9,7 +9,7 @@ export async function getRecommendation({ height, weight, fit, unit }: { height:
     body: JSON.stringify({ 
       height, 
       weight, 
-      fitPreference: fit,
+      fitPreference: fit.toLowerCase(),
       unit 
     }),
   });

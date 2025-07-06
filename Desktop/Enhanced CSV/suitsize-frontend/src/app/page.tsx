@@ -76,23 +76,23 @@ export default function Home() {
         {result && (
           <div className={styles.resultCard}>
             <h2>Your Recommended Size</h2>
-            <div className={styles.size}>{result.size}</div>
+            <div className={styles.size}>{result.recommendation?.size || result.size}</div>
             <div className={styles.confidence}>
-              Confidence: {result.confidence}% ({result.confidenceLevel})
+              Confidence: {Math.round((result.recommendation?.confidence || result.confidence) * 100)}% ({result.recommendation?.confidenceLevel || result.confidenceLevel})
             </div>
             <div className={styles.message}>{result.message}</div>
-            {result.details && (
+            {result.recommendation && (
               <div className={styles.details}>
-                <p><strong>Body Type:</strong> {result.details.bodyType}</p>
-                {result.details.rationale && (
-                  <p><strong>Rationale:</strong> {result.details.rationale}</p>
+                <p><strong>Body Type:</strong> {result.recommendation.bodyType}</p>
+                {result.recommendation.rationale && (
+                  <p><strong>Rationale:</strong> {result.recommendation.rationale}</p>
                 )}
-                {result.details.alterations && result.details.alterations.length > 0 && (
+                {result.recommendation.alterations && result.recommendation.alterations.length > 0 && (
                   <div>
                     <strong>Recommended Alterations:</strong>
                     <ul>
-                      {result.details.alterations.map((alteration, index) => (
-                        <li key={index}>{alteration}</li>
+                      {result.recommendation.alterations.map((alteration, index) => (
+                        <li key={index}>{alteration.replace('_', ' ')}</li>
                       ))}
                     </ul>
                   </div>
