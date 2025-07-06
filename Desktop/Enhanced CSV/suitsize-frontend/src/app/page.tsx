@@ -77,8 +77,28 @@ export default function Home() {
           <div className={styles.resultCard}>
             <h2>Your Recommended Size</h2>
             <div className={styles.size}>{result.size}</div>
-            <div className={styles.rationale}>{result.rationale}</div>
-            {result.fitAdvice && <div className={styles.fitAdvice}>{result.fitAdvice}</div>}
+            <div className={styles.confidence}>
+              Confidence: {result.confidence}% ({result.confidenceLevel})
+            </div>
+            <div className={styles.message}>{result.message}</div>
+            {result.details && (
+              <div className={styles.details}>
+                <p><strong>Body Type:</strong> {result.details.bodyType}</p>
+                {result.details.rationale && (
+                  <p><strong>Rationale:</strong> {result.details.rationale}</p>
+                )}
+                {result.details.alterations && result.details.alterations.length > 0 && (
+                  <div>
+                    <strong>Recommended Alterations:</strong>
+                    <ul>
+                      {result.details.alterations.map((alteration, index) => (
+                        <li key={index}>{alteration}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
