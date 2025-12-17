@@ -43,7 +43,19 @@ class MLEnhancedRailwayBackend:
     
     def is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
         """Check if cache entry is still valid"""
-        return time.time() - cache_entry.get('timestamp', 0) < self.cache_ttl
+        timestamp = cache_entry.get('timestamp')
+        if isinstance(timestamp, str):
+            # Handle ISO timestamp format
+            try:
+                timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).timestamp()
+            except:
+                return False
+        elif isinstance(timestamp, datetime):
+            timestamp = timestamp.timestamp()
+        elif not isinstance(timestamp, (int, float)):
+            return False
+        
+        return time.time() - timestamp < self.cache_ttl
     
     def check_rate_limit(self, client_ip: str) -> bool:
         """Check if client is within rate limits"""
