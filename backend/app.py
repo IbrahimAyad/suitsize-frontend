@@ -23,7 +23,10 @@ from typing import Dict, Any
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from ml_enhanced_sizing_engine import EnhancedSuitSizeEngine
-from production_performance_backend import ProductionPerformanceBackend
+from suitsize_production_backend import ProductionOptimizedBackend
+from wedding_sizing_engine import WeddingSizingEngine, WeddingRole, WeddingStyle, WeddingPartyMember, WeddingDetails
+from wedding_group_coordination import WeddingGroup, GroupConsistencyAnalyzer
+from kctmenswear_integration import KCTmenswearIntegration
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +42,13 @@ class ProductionOptimizedBackend:
         
         # Initialize performance backend with database
         logger.info("⚡ Initializing performance optimization layer...")
-        self.perf_backend = ProductionPerformanceBackend("suitsize_prod.db")
+        self.perf_backend = ProductionOptimizedBackend()
+        
+        # Initialize Wedding Integration Components
+        logger.info("👰🤵 Initializing wedding integration...")
+        self.wedding_sizing_engine = WeddingSizingEngine()
+        self.wedding_coordinator = GroupConsistencyAnalyzer()
+        self.kct_integration = KCTmenswearIntegration()
         
         # Cache statistics
         self.start_time = time.time()
@@ -251,6 +260,111 @@ try:
         """System optimization endpoint"""
         return jsonify(prod_backend.cleanup_and_optimize())
     
+    # Wedding Integration Endpoints
+    @app.route('/api/wedding/size', methods=['POST'])
+    def wedding_size_recommendation():
+        """Wedding party member size recommendation endpoint"""
+        try:
+            data = request.get_json()
+            
+            # Create wedding member from request
+            member = WeddingPartyMember(
+                id=data.get('id', ''),
+                name=data.get('name', ''),
+                role=WeddingRole(data.get('role', 'groom')),
+                height=float(data.get('height', 0)),
+                weight=float(data.get('weight', 0)),
+                fit_preference=data.get('fit_preference', 'regular'),
+                unit=data.get('unit', 'metric')
+            )
+            
+            # Create wedding details
+            wedding_details = WeddingDetails(
+                date=datetime.fromisoformat(data.get('wedding_date')),
+                style=WeddingStyle(data.get('wedding_style', 'formal')),
+                season=data.get('season', 'spring'),
+                venue_type=data.get('venue_type', 'indoor'),
+                formality_level=data.get('formality_level', 'formal')
+            )
+            
+            # Get size recommendation
+            result = prod_backend.wedding_sizing_engine.get_role_based_recommendation(member, wedding_details)
+            
+            return jsonify({
+                'success': True,
+                'member_name': member.name,
+                'role': member.role.value,
+                'recommendation': result
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+    
+    @app.route('/api/wedding/group/create', methods=['POST'])
+    def create_wedding_group():
+        """Create wedding group and calculate coordination"""
+        try:
+            data = request.get_json()
+            
+            # Create wedding details
+            wedding_details = WeddingDetails(
+                date=datetime.fromisoformat(data.get('wedding_date')),
+                style=WeddingStyle(data.get('wedding_style', 'formal')),
+                season=data.get('season', 'spring'),
+                venue_type=data.get('venue_type', 'indoor'),
+                formality_level=data.get('formality_level', 'formal')
+            )
+            
+            # Create wedding group
+            wedding_group = WeddingGroup(
+                id=data.get('wedding_id', ''),
+                wedding_details=wedding_details
+            )
+            
+            # Add members
+            for member_data in data.get('members', []):
+                member = WeddingPartyMember(
+                    id=member_data.get('id', ''),
+                    name=member_data.get('name', ''),
+                    role=WeddingRole(member_data.get('role', 'groomsman')),
+                    height=float(member_data.get('height', 0)),
+                    weight=float(member_data.get('weight', 0)),
+                    fit_preference=member_data.get('fit_preference', 'regular'),
+                    unit=member_data.get('unit', 'metric')
+                )
+                wedding_group.add_member(member)
+            
+            # Calculate group coordination
+            consistency_result = prod_backend.wedding_coordinator.analyze_group_consistency(wedding_group)
+            consistency_score = consistency_result.overall_score
+            
+            # Create KCT order
+            kct_order = prod_backend.kct_integration.create_wedding_order(wedding_group)
+            
+            return jsonify({
+                'success': True,
+                'wedding_group_id': wedding_group.id,
+                'member_count': len(wedding_group.members),
+                'consistency_score': consistency_score,
+                'kct_order_id': kct_order.kct_order_number
+            })
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+    
+    @app.route('/api/wedding/order/<order_id>', methods=['GET'])
+    def get_wedding_order_status(order_id):
+        """Get wedding order status and tracking"""
+        try:
+            tracking = prod_backend.kct_integration.track_order_status(order_id)
+            return jsonify({
+                'success': True,
+                'order_id': order_id,
+                'tracking': tracking
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+    
     @app.route('/', methods=['GET'])
     def root():
         """Root endpoint with API information"""
@@ -264,13 +378,20 @@ try:
                 'Production-grade Scalability',
                 'ML-enhanced Recommendations (SVR+GRNN)',
                 'Thread-safe Operations',
-                'Automatic Optimization'
+                'Automatic Optimization',
+                'Wedding Party Sizing & Coordination',
+                'KCTmenswear API Integration',
+                'Group Consistency Scoring',
+                'Bulk Order Optimization'
             ],
             'endpoints': {
                 'recommend': '/api/recommend (POST)',
                 'health': '/api/health',
                 'performance': '/api/performance?hours=1',
-                'optimize': '/api/optimize (POST)'
+                'optimize': '/api/optimize (POST)',
+                'wedding_size': '/api/wedding/size (POST)',
+                'wedding_group': '/api/wedding/group/create (POST)',
+                'wedding_order': '/api/wedding/order/<order_id> (GET)'
             },
             'timestamp': datetime.now().isoformat()
         })
