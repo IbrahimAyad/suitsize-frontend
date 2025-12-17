@@ -27,6 +27,7 @@ from suitsize_production_backend import ProductionOptimizedBackend
 from wedding_sizing_engine import WeddingSizingEngine, WeddingRole, WeddingStyle, WeddingPartyMember, WeddingDetails
 from wedding_group_coordination import WeddingGroup, GroupConsistencyAnalyzer
 from kctmenswear_integration import KCTmenswearIntegration
+from minimal_sizing_input import MinimalSizingInput, create_minimal_input_from_dict
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -261,6 +262,84 @@ try:
         return jsonify(prod_backend.cleanup_and_optimize())
     
     # Wedding Integration Endpoints
+    
+    # NEW: WAIR-style minimal input endpoint
+    @app.route('/api/size', methods=['POST'])
+    def get_minimal_size_recommendation():
+        """WAIR-style 4-field minimal input sizing with wedding enhancement"""
+        try:
+            data = request.get_json()
+            
+            # Validate required fields (WAIR-style)
+            required_fields = ['height', 'weight', 'fit_style', 'body_type']
+            for field in required_fields:
+                if field not in data:
+                    return jsonify({
+                        'success': False,
+                        'error': f"Required field '{field}' missing",
+                        'message': 'Minimal input requires: height, weight, fit_style, body_type'
+                    }), 400
+            
+            # Create minimal input
+            minimal_input = create_minimal_input_from_dict(data)
+            
+            # Validate input
+            validation = minimal_input.validate_minimal_input()
+            if not validation["valid"]:
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid minimal input',
+                    'validation_errors': validation["errors"],
+                    'validation_warnings': validation["warnings"]
+                }), 400
+            
+            # Get wedding-enhanced recommendation
+            result = prod_backend.wedding_sizing_engine.get_minimal_recommendation(minimal_input)
+            
+            # Add WAIR-style response metadata
+            if result["success"]:
+                response = {
+                    'success': True,
+                    'recommended_size': result["recommended_size"],
+                    'confidence': round(result["confidence"], 3),
+                    'accuracy_level': result["accuracy_level"],
+                    'input_type': result["input_type"],
+                    'processing_time_ms': result["processing_time_ms"],
+                    
+                    # WAIR-style metadata
+                    'wedding_enhanced': result["wedding_enhanced"],
+                    'body_type_adjusted': result["body_type_adjusted"],
+                    'enhancement_details': result["enhancement_details"],
+                    
+                    # Additional details
+                    'alternatives': result.get("alternatives", []),
+                    'alterations': result.get("alterations", []),
+                    'size_details': result.get("size_details", {})
+                }
+                
+                # Add wedding-specific enhancements if applicable
+                if "wedding_role_optimization" in result:
+                    response["wedding_role_optimization"] = result["wedding_role_optimization"]
+                
+                if "timeline_optimization" in result:
+                    response["timeline_optimization"] = result["timeline_optimization"]
+                
+                # Add warnings if any
+                if validation["warnings"]:
+                    response["warnings"] = validation["warnings"]
+                
+                return jsonify(response)
+            else:
+                return jsonify(result), 400
+                
+        except Exception as e:
+            logger.error(f"Minimal sizing error: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Sizing failed: {str(e)}',
+                'message': 'Please check your input and try again'
+            }), 500
+    
     @app.route('/api/wedding/size', methods=['POST'])
     def wedding_size_recommendation():
         """Wedding party member size recommendation endpoint"""
